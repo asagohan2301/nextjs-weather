@@ -1,35 +1,34 @@
 'use client'
-
 import { useState } from "react";
 
 export default function Page() {
   const [inputCity, setInputCity] = useState("");
   const [city, setCity] = useState("");
-  const [weather, setWeather] = useState("");
+  const [currentWeather, setCurrentWeather] = useState("");
   const [tempMin, setTempMin] = useState("");
   const [tempMax, setTempMax] = useState("");
 
-  const key = "xxx";
-
   async function onClickGetWeather() {
-    const urlGeo = `http://api.openweathermap.org/geo/1.0/direct?q=${inputCity}&limit=1&appid=${key}`
-    const resGeo = await fetch(urlGeo);
-    if (!resGeo.ok) {
-      throw new Error('Failed to fetch data')
-    }
-    const dataGeo = await resGeo.json();
-    setCity(dataGeo[0].name);
-    setInputCity("");
+    try {
+      const resGeocode = await fetch(`/api/geocode?city=${encodeURIComponent(inputCity)}`);
+      if (!resGeocode.ok) {
+        throw new Error('地理コードの取得に失敗しました');
+      }
+      const { geocode } = await resGeocode.json();
+      setCity(geocode[0].name);
+      setInputCity("");
 
-    const urlWeather = `https://api.openweathermap.org/data/2.5/weather?lat=${dataGeo[0].lat}&lon=${dataGeo[0].lon}&appid=${key}`;
-    const resWeather = await fetch(urlWeather);
-    if (!resWeather.ok) {
-      throw new Error('Failed to fetch data')
+      const resWeather = await fetch(`api/weather?lat=${geocode[0].lat}&lon=${geocode[0].lon}`);
+      if (!resWeather.ok) {
+        throw new Error('天気情報の取得に失敗しました');
+      }
+      const { weather } = await resWeather.json();
+      setCurrentWeather(weather.weather[0].main);
+      setTempMin(Math.round(weather.main.temp_min - 273.15));
+      setTempMax(Math.round(weather.main.temp_max - 273.15));
+    } catch (error) {
+      console.error('エラー:', error);
     }
-    const dataWeather = await resWeather.json();
-    setWeather(dataWeather.weather[0].main);
-    setTempMin(Math.round(dataWeather.main.temp_min - 273.15));
-    setTempMax(Math.round(dataWeather.main.temp_max - 273.15));
   }
 
   function onChangeSetCity(e) {
@@ -47,7 +46,7 @@ export default function Page() {
       />
       <button className="bg-gray-200 p-2 rounded-md" onClick={onClickGetWeather}>天気情報を取得する</button>
       <h1>都市名: {city}</h1>
-      <p>天気: {weather}</p>
+      <p>天気: {currentWeather}</p>
       <p>最低気温: {tempMin}°C</p>
       <p>最高気温: {tempMax}°C</p>
     </div>
